@@ -22,14 +22,14 @@ jobs:
 
       - name: Create zip
         run: |
-          cd custom_components/pollenprognos
-          zip pollenprognos.zip -r ./
+          cd custom_components/homeassistant-air-quality-com
+          zip air-quality-com.zip -r ./
 
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./custom_components/pollenprognos/pollenprognos.zip
-          asset_name: pollenprognos.zip
+          file: ./custom_components/air-quality-com/air-quality-com.zip
+          asset_name: air-quality-com.zip
           tag: ${{ github.ref }}
           overwrite: true

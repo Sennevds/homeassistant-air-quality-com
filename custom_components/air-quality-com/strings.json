@@ -2,24 +2,27 @@
   "config": {
     "step": {
       "user": {
-        "description": "Enter the API url to use (ask around to find out what URL to use)",
+        "description": "Enter you coordinates",
         "data": {
-          "conf_url": "API URL"
+          "CONF_LATITUDE": "Latitude",
+          "CONF_LONGITUDE": "Longitude",
+          "CONF_SPAN_LATITUDE": "Span Latitude",
+          "CONF_SPAN_LONGITUDE": "Span Longitude"
         }
       },
       "fetch_cities": {
-        "title": "Pollenprognos - Loading...",
+        "title": "air-quality-com - Loading...",
         "description": "Retrieves pollen forecasts"
       },
       "select_city": {
-        "title": "Pollenprognos - City",
-        "description": "Choose which city you want to monitor",
+        "title": "air-quality-com - Station",
+        "description": "Choose which Station you want to monitor",
         "data": {
-          "conf_city": "Select city"
+          "conf_city": "Select Station"
         }
       },
       "select_pollen": {
-        "title": "Pollenprognos - Pollen",
+        "title": "air-quality-com - Pollen",
         "description": "Choose which pollen you want to monitor",
         "data": {
           "conf_pollen": "Select pollen"

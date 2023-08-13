@@ -8,18 +8,18 @@
         }
       },
       "fetch_cities": {
-        "title": "Pollenprognos - Loading...",
+        "title": "air-quality.com - Loading...",
         "description": "Retrieves pollen forecasts"
       },
       "select_city": {
-        "title": "Pollenprognos - City",
+        "title": "air-quality.com - City",
         "description": "Choose which city you want to monitor",
         "data": {
           "conf_city": "Select city"
         }
       },
       "select_pollen": {
-        "title": "Pollenprognos - Pollen",
+        "title": "air-quality.com - Pollen",
         "description": "Choose which pollen you want to monitor",
         "data": {
           "conf_pollen": "Select pollen"

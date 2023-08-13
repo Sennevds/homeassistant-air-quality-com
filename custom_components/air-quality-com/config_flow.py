@@ -5,13 +5,22 @@ import voluptuous as vol
 
 from .api import PollenApi
 from homeassistant import config_entries
-from .const import DOMAIN, CONF_ALLERGENS, CONF_NAME, CONF_CITY, CONF_URL
+from .const import (
+    DOMAIN,
+    CONF_ALLERGENS,
+    CONF_NAME,
+    CONF_CITY,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
+    CONF_SPAN_LATITUDE,
+    CONF_SPAN_LONGITUDE,
+)
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-class PollenprognosFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class AirQualityComFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Blueprint."""
 
     VERSION = 1
@@ -28,9 +37,11 @@ class PollenprognosFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                cv.url(user_input.get(CONF_URL, ""))
-                self._init_info[CONF_URL] = user_input[CONF_URL]
-                return await self.async_step_fetch_cities(url=user_input.get(CONF_URL, ""))
+                self._init_info["center_lat"] = user_input[CONF_LATITUDE]
+                self._init_info["center_lon"] = user_input[CONF_LONGITUDE]
+                self._init_info["span_lat"] = user_input[CONF_SPAN_LATITUDE]
+                self._init_info["span_lon"] = user_input[CONF_SPAN_LONGITUDE]
+                return await self.async_step_fetch_cities(self._init_info)
             except vol.Invalid:
                 errors["base"] = "bad_host"
 
@@ -39,14 +50,23 @@ class PollenprognosFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_URL, default=""): str
+                    vol.Optional(
+                        CONF_LATITUDE, default=self.hass.config.latitude
+                    ): cv.latitude,
+                    vol.Optional(
+                        CONF_LONGITUDE, default=self.hass.config.longitude
+                    ): cv.longitude,
+                    vol.Optional(CONF_SPAN_LATITUDE, default=0.02): cv.latitude,
+                    vol.Optional(CONF_SPAN_LONGITUDE, default=0.02): cv.longitude,
                 }
-            )
+            ),
         )
 
-    async def async_step_fetch_cities(self, url=None):
+    async def async_step_fetch_cities(self, init_info=None):
         if not self.task_fetch_cities:
-            self.task_fetch_cities = self.hass.async_create_task(self._async_task_fetch_cities(url))
+            self.task_fetch_cities = self.hass.async_create_task(
+                self._async_task_fetch_stations(init_info)
+            )
             return self.async_show_progress(
                 step_id="fetch_cities",
                 progress_action="fetch_cities",
@@ -70,45 +90,64 @@ class PollenprognosFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_select_city(self, user_input=None):
         if user_input is not None:
             self._init_info[CONF_CITY] = user_input[CONF_CITY]
-            self._init_info[CONF_NAME] = next(item for item in self.data.get('cities', []).get('cities', []) if
-                 item["id"] == self._init_info[CONF_CITY])['name']
+            station = next(
+                item
+                for item in self.data
+                if item["place"]["place_id"] == self._init_info[CONF_CITY]
+            )["place"]
+            self._init_info[CONF_NAME] = station["name"]
+            self._init_info[CONF_LATITUDE] = station["lat"]
+            self._init_info[CONF_LONGITUDE] = station["lon"]
             return await self.async_step_select_pollen()
 
-        cities = {city['id']: city['name'] for city in self.data.get('cities', []).get('cities', []) }
+        cities = {
+            station["place"][
+                "place_id"
+            ]: f'{station["place"]["name"]} ({station["place"]["type"]})'
+            for station in self.data
+        }
         return self.async_show_form(
             step_id="select_city",
             data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_CITY, default=list(cities.keys())): vol.In(cities)
-                }
-            )
+                {vol.Required(CONF_CITY, default=list(cities.keys())): vol.In(cities)}
+            ),
         )
 
     async def async_step_select_pollen(self, user_input=None):
         if user_input is not None:
             self._init_info[CONF_ALLERGENS] = user_input[CONF_ALLERGENS]
-            await self.async_set_unique_id(f"{self._init_info[CONF_CITY]}-{self._init_info[CONF_NAME]}")
+            await self.async_set_unique_id(
+                f"{self._init_info[CONF_CITY]}-{self._init_info[CONF_NAME]}"
+            )
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(
                 title=self._init_info[CONF_NAME], data=self._init_info
             )
-
-        pollen = {pollen['type_code']: pollen['type'] for pollen in self.data.get('pollen_types', [])}
+        station = next(
+            item
+            for item in self.data
+            if item["place"]["place_id"] == self._init_info[CONF_CITY]
+        )
+        pollen = {
+            pollen["kind"]: pollen["name"] for pollen in station["latest"]["readings"]
+        }
         return self.async_show_form(
             step_id="select_pollen",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_ALLERGENS, default=list(pollen.keys())): cv.multi_select(pollen)
+                    vol.Required(
+                        CONF_ALLERGENS, default=list(pollen.keys())
+                    ): cv.multi_select(pollen)
                 }
-            )
+            ),
         )
 
-    async def _async_task_fetch_cities(self, url):
+    async def _async_task_fetch_stations(self, init_info=None):
         try:
             session = async_create_clientsession(self.hass)
-            client = PollenApi(session, url)
-            self.data = await client.async_get_data()
+            client = PollenApi(session)
+            self.data = await client.fetch_places(init_info)
             _LOGGER.debug("Fetched data: %s", self.data)
         finally:
             self.hass.async_create_task(

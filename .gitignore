@@ -1,8 +1,17 @@
-# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
-# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
-
-# IntelliJ
-out/
-.idea/
-.DS_Store
+# artifacts
 __pycache__
+.pytest*
+*.egg-info
+*/build/*
+*/dist/*
+
+
+# misc
+.coverage
+.vscode
+coverage.xml
+
+
+# Home Assistant configuration
+config/*
+!config/configuration.yaml

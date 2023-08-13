@@ -1,10 +1,10 @@
-"""Pollenprognos Custom Component."""
+"""air-quality-com Custom Component."""
 import asyncio
 import logging
 from datetime import timedelta, datetime
 
 from .api import PollenApi
-from .const import DOMAIN, PLATFORMS, CONF_URL
+from .const import CONF_CITY, CONF_LATITUDE, CONF_LONGITUDE, DOMAIN, PLATFORMS, CONF_URL
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, Config
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -27,9 +27,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data.setdefault(DOMAIN, {})
 
     session = async_get_clientsession(hass)
-    client = PollenApi(session, entry.data[CONF_URL])
+    client = PollenApi(session)
 
-    coordinator = PollenprognosDataUpdateCoordinator(hass, client=client)
+    coordinator = AirQualityComDataUpdateCoordinator(hass, client=client)
     await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
@@ -48,12 +48,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-class PollenprognosDataUpdateCoordinator(DataUpdateCoordinator):
+class AirQualityComDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
-    def __init__(
-        self, hass: HomeAssistant, client: PollenApi
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, client: PollenApi) -> None:
         """Initialize."""
         self.api = client
         self.platforms = []
@@ -64,7 +62,22 @@ class PollenprognosDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         try:
-            data = await self.api.async_get_data()
+            data = await self.api.fetch_places(
+                {
+                    "center_lat": self.config_entry.data[CONF_LATITUDE],
+                    "center_lon": self.config_entry.data[CONF_LONGITUDE],
+                    "span_lat": "0.0000001",
+                    "span_lon": "0.0000001",
+                }
+            )
+            if data.__len__() > 1:
+                data = next(
+                    item
+                    for item in data
+                    if item["place"]["place_id"] == self.config_entry.data[CONF_CITY]
+                )
+            else:
+                data = data[0]
             self.last_updated = datetime.now()
             return data
         except Exception as exception:

@@ -9,23 +9,24 @@ TIMEOUT = 10
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-HEADERS = {
-    "Content-type": "application/json; charset=UTF-8",
-    "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 9; SM-G955F Build/PPR1.180610.011)",
-}
-
 
 class PollenApi:
-    def __init__(self, session: aiohttp.ClientSession, url) -> None:
+    def __init__(self, session: aiohttp.ClientSession) -> None:
         self._session = session
-        self._url = url
+        self._url = "https://air-quality.com/data/get_map_data"
 
-    async def async_get_data(self) -> dict:
+    async def fetch_places(self, post_data: None) -> dict:
         """Get data from the API."""
-        return await self.api_wrapper("get", self._url)
+        post_data["standard"] = "caqi_eu"
+        result = await self.api_wrapper("post", self._url, data=post_data)
+        return result["data"]["map"]
+
+    async def async_get_data(self, post_data: None) -> dict:
+        """Get data from the API."""
+        return await self.api_wrapper("post", self._url, data=post_data)
 
     async def api_wrapper(
-            self, method: str, url: str, data: dict = {}, headers: dict = {}
+        self, method: str, url: str, data: dict = {}, headers: dict = {}
     ) -> dict:
         """Get information from the API."""
         try:
@@ -41,7 +42,9 @@ class PollenApi:
                     await self._session.patch(url, headers=headers, json=data)
 
                 elif method == "post":
-                    await self._session.post(url, headers=headers, json=data)
+                    response = await self._session.post(url, data=data)
+                    json = await response.json(content_type="text/html")
+                    return json
 
         except asyncio.TimeoutError as exception:
             _LOGGER.error(
