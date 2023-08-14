@@ -1,12 +1,14 @@
 {
   "domain": "air-quality-com",
   "name": "Air-quality-com",
-  "documentation": "https://github.com/Sennevds/homeassistant-air-quality-com",
-  "issue_tracker": "https://github.com/Sennevds/homeassistant-air-quality-com/issues",
-  "dependencies": [],
-  "codeowners": ["@Sennevds"],
+  "codeowners": [
+    "@Sennevds"
+  ],
   "config_flow": true,
-  "version": "v0.0.0",
+  "dependencies": [],
+  "documentation": "https://github.com/Sennevds/homeassistant-air-quality-com",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Sennevds/homeassistant-air-quality-com/issues",
   "requirements": [],
-  "iot_class": "cloud_polling"
+  "version": "v0.0.0"
 }

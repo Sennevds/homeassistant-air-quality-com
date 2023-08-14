@@ -1,11 +1,6 @@
 {
   "name": "air-quality.com",
-  "iot_class": "Cloud Polling",
   "homeassistant": "2021.3.0",
   "hide_default_branch": true,
-  "zip_release": true,
-  "filename": "air-quality-com.zip",
-  "domains": [
-    "sensor"
-  ]
+  "zip_release": true
 }
